@@ -11,9 +11,8 @@ export class CategoryMapper {
     dto.active = entity.active
   }
 
-  toEntity(dto: CreateCategoryDto, id: number) {
+  toEntity(dto: CreateCategoryDto) {
     const entity = new Category()
-    entity.id = id
     entity.name = dto.name
     entity.active = dto.active ? true : false
     return entity
