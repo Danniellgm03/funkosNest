@@ -1,10 +1,12 @@
+import { Category } from '../enums/Categoria'
+
 export class Funko {
   id: number
   name: string
   price: number
   quantity: number
   image: string
-  category: string
+  category: Category
   createdAt: Date
-  updateAt: Date
+  updatedAt: Date
 }
