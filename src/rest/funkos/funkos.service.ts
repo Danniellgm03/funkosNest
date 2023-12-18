@@ -42,10 +42,12 @@ export class FunkosService {
       `Actualizando funko con id ${id} - ${JSON.stringify(updateFunkoDto)}`,
     )
     if (index !== -1) {
+      const id = this.funkos[index].id
       this.funkos[index] = {
         ...this.funkos[index],
         ...updateFunkoDto,
         updatedAt: new Date(),
+        id,
       }
       return this.funkoMapper.toEntity(this.funkos[index])
     } else {
