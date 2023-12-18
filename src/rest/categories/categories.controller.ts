@@ -18,31 +18,31 @@ export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Get()
-  findAll() {
-    return this.categoriesService.findAll()
+  async findAll() {
+    return await this.categoriesService.findAll()
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.categoriesService.findById(id)
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return await this.categoriesService.findById(id)
   }
 
   @Post()
   @HttpCode(201)
-  create(@Body() createCategoryDto: CreateCategoryDto) {
-    return this.categoriesService.create(createCategoryDto)
+  async create(@Body() createCategoryDto: CreateCategoryDto) {
+    return await this.categoriesService.create(createCategoryDto)
   }
 
   @Put(':id')
-  update(
+  async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateCategoryDto: UpdateCategoryDto,
   ) {
-    return this.categoriesService.update(id, updateCategoryDto)
+    return await this.categoriesService.update(id, updateCategoryDto)
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.categoriesService.remove(id)
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    return await this.categoriesService.remove(id)
   }
 }
