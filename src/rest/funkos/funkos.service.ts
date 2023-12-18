@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { CreateFunkoDto } from './dto/create-funko.dto'
 import { UpdateFunkoDto } from './dto/update-funko.dto'
 import { Funko } from './entities/funko.entity'
+import { FunkoMapper } from './mappers/funko-mapper'
 
 @Injectable()
 export class FunkosService {
@@ -9,20 +10,20 @@ export class FunkosService {
   private idCount = 1
   private readonly logger = new Logger(FunkosService.name)
 
+  constructor(private readonly funkoMapper: FunkoMapper) {}
+
   create(createFunkoDto: CreateFunkoDto): Funko {
-    const funko: Funko = {
-      ...createFunkoDto,
-      id: this.idCount++,
-      createdAt: new Date(),
-      updateAt: new Date(),
-    }
+    const funko = this.funkoMapper.CreatetoEntity(createFunkoDto)
+    funko.id = this.idCount++
     this.logger.log(`Funko creado ${JSON.stringify(funko)}}`)
-    return this.funkos.push(funko) ? funko : null
+    return this.funkos.push(funko) ? this.funkoMapper.toEntity(funko) : null
   }
 
   findAll() {
     this.logger.log(`Listando todos los funkos`)
-    return this.funkos
+    return this.funkos.map((f) => {
+      return this.funkoMapper.toDto(f)
+    })
   }
 
   findById(id: number) {
@@ -32,7 +33,7 @@ export class FunkosService {
     if (!funko) {
       throw new NotFoundException(`El funko con id ${id} no existe`)
     }
-    return funko
+    return this.funkoMapper.toEntity(funko)
   }
 
   update(id: number, updateFunkoDto: UpdateFunkoDto) {
@@ -44,9 +45,9 @@ export class FunkosService {
       this.funkos[index] = {
         ...this.funkos[index],
         ...updateFunkoDto,
-        updateAt: new Date(),
+        updatedAt: new Date(),
       }
-      return this.funkos[index]
+      return this.funkoMapper.toEntity(this.funkos[index])
     } else {
       throw new NotFoundException(`El funko con id ${id} no existe`)
     }
@@ -58,7 +59,7 @@ export class FunkosService {
     if (index !== -1) {
       const funko = this.funkos[index]
       this.funkos.splice(index, 1)
-      return funko
+      return this.funkoMapper.toEntity(funko)
     } else {
       throw new NotFoundException(`El funko con id ${id} no existe`)
     }
