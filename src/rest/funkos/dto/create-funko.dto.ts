@@ -24,10 +24,16 @@ export class CreateFunkoDto {
   )
   @Min(0, { message: 'El precio debe ser mayor a 0' })
   @Max(999999, { message: 'El precio debe ser menor a 999999' })
+  @IsNumber()
   price: number
 
   @IsNotEmpty({ message: 'La cantidad es requerida' })
-  @IsNumber({}, { message: 'La cantidad debe ser un número' })
+  @IsNumber(
+    {
+      maxDecimalPlaces: 0,
+    },
+    { message: 'La cantidad debe ser un número' },
+  )
   @Min(0, { message: 'La cantidad debe ser mayor a 0' })
   quantity: number
 
