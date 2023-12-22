@@ -10,6 +10,8 @@ import { Category } from './entities/category.entity'
 import { CategoryMapper } from './mappers/category-mapper'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
+import { v4 as uuidv4 } from 'uuid'
+import { Funko } from '../funkos/entities/funko.entity'
 
 @Injectable()
 export class CategoriesService {
@@ -19,10 +21,13 @@ export class CategoriesService {
     private readonly CategoryMapper: CategoryMapper,
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
+    @InjectRepository(Funko)
+    private readonly funkoRepository: Repository<Funko>,
   ) {}
 
   async create(createCategoryDto: CreateCategoryDto) {
     const category = this.CategoryMapper.toEntity(createCategoryDto)
+    category.id = uuidv4()
     await this.categoryRepository.save(category)
     this.logger.log(`La categoría ${category.name} ha sido creada`)
     return category
@@ -33,7 +38,7 @@ export class CategoriesService {
     return await this.categoryRepository.find()
   }
 
-  async findById(id: number) {
+  async findById(id: string) {
     const category = await this.categoryRepository.findOneBy({ id })
     this.logger.log(`Buscando categoria con el id: ${id}`)
     if (!category) {
@@ -42,7 +47,7 @@ export class CategoriesService {
     return category
   }
 
-  async update(id: number, updateCategoryDto: UpdateCategoryDto) {
+  async update(id: string, updateCategoryDto: UpdateCategoryDto) {
     const category = await this.findById(id)
 
     if (
@@ -62,8 +67,17 @@ export class CategoriesService {
     return category
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     const category = await this.findById(id)
+    const funkosExists = await this.funkoRepository.count({
+      where: {
+        category: { id: id },
+      },
+    })
+
+    if (funkosExists > 0) {
+      throw new BadRequestException('La categoria tiene funkos asociados')
+    }
 
     if (category) {
       await this.categoryRepository.delete(category.id)
