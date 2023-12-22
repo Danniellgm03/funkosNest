@@ -1,10 +1,10 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm'
 import { Funko } from '../../funkos/entities/funko.entity'
 
 @Entity('categories')
 export class Category {
-  @PrimaryGeneratedColumn()
-  id: number
+  @PrimaryColumn({ type: 'uuid' })
+  id: string
 
   @Column('varchar', { length: 255, nullable: false })
   name: string
@@ -14,4 +14,13 @@ export class Category {
 
   @OneToMany(() => Funko, (funko) => funko.category)
   funkos: Funko[]
+
+  @Column('timestamp', { default: () => 'CURRENT_TIMESTAMP' })
+  createdAt: Date
+
+  @Column('timestamp', {
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
+  updatedAt: Date
 }
