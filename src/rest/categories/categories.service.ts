@@ -26,6 +26,17 @@ export class CategoriesService {
   ) {}
 
   async create(createCategoryDto: CreateCategoryDto) {
+    const categoryExists = await this.exists(createCategoryDto.name)
+
+    if (categoryExists) {
+      this.logger.log(
+        `La categoria con el nombre ${createCategoryDto.name} no se puede crear porque ya existe`,
+      )
+      throw new BadRequestException(
+        `La categoria con el nombre ${createCategoryDto.name} ya existe`,
+      )
+    }
+
     const category = this.CategoryMapper.toEntity(createCategoryDto)
     category.id = uuidv4()
     await this.categoryRepository.save(category)
@@ -50,17 +61,30 @@ export class CategoriesService {
   async update(id: string, updateCategoryDto: UpdateCategoryDto) {
     const category = await this.findById(id)
 
+    if (category.name != updateCategoryDto.name) {
+      const categoryExists = await this.exists(updateCategoryDto.name)
+
+      if (categoryExists) {
+        this.logger.log(
+          `La categoria con el nombre ${updateCategoryDto.name} no se puede actualizar porque ya existe una con ese nombre`,
+        )
+        throw new BadRequestException(
+          `La categoria con el nombre ${updateCategoryDto.name} ya existe`,
+        )
+      }
+    }
+
     if (
-      updateCategoryDto.name != undefined ||
+      updateCategoryDto.name != undefined &&
       updateCategoryDto.active != undefined
     ) {
       this.logger.log(`Actualizando categoria con id ${id}`)
-      category.name = updateCategoryDto.name ?? category.name
-      category.active = updateCategoryDto.active ?? category.active
+      category.name = updateCategoryDto.name
+      category.active = updateCategoryDto.active
       await this.categoryRepository.save(category)
     } else {
       throw new BadRequestException(
-        'Para actualizar una categoria es necesario alguno de los siguientes datos (name, active)',
+        'Para actualizar una categoria es necesario los siguientes datos (name, active)',
       )
     }
 
