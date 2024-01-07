@@ -19,23 +19,6 @@ export class FunkosService {
     private readonly funkoMapper: FunkoMapper,
   ) {}
 
-  async create(createFunkoDto: CreateFunkoDto) {
-    const funko = this.funkoMapper.CreatetoEntity(createFunkoDto)
-    if (!funko.category) {
-      const cat: Category = await this.categoryRepository.findOneBy({
-        name: createFunkoDto.category,
-      })
-
-      if (!cat || !cat.active) {
-        throw new NotFoundException(
-          `La categoria ${createFunkoDto.category} no existe o no esta activa`,
-        )
-      }
-      funko.category = cat
-    }
-    return this.funkoMapper.toDto(await this.funkoRepository.save(funko))
-  }
-
   async findAll() {
     this.logger.log(`Listando todos los funkos`)
     const funkos = await this.funkoRepository
@@ -60,21 +43,42 @@ export class FunkosService {
     return this.funkoMapper.toDto(funko)
   }
 
+  async create(createFunkoDto: CreateFunkoDto) {
+    const funko = this.funkoMapper.CreatetoEntity(createFunkoDto)
+
+    if (createFunkoDto.category) {
+      const cat: Category = await this.categoryRepository.findOneBy({
+        name: createFunkoDto.category,
+      })
+
+      if (!cat || !cat.active) {
+        throw new NotFoundException(
+          `La categoria ${createFunkoDto.category} no existe o no esta activa`,
+        )
+      }
+      funko.category = cat
+    }
+    return this.funkoMapper.toDto(await this.funkoRepository.save(funko))
+  }
+
   async update(id: number, updateFunkoDto: UpdateFunkoDto) {
     const funko = this.funkoMapper.toEntity(await this.findById(id))
-    const category = await this.categoryRepository.findOneBy({
-      name: updateFunkoDto.category,
-    })
-    if (!category || !category.active) {
-      throw new NotFoundException(
-        `La categoria ${updateFunkoDto.category} no existe o no esta activa`,
-      )
+    if (updateFunkoDto.category) {
+      const category = await this.categoryRepository.findOneBy({
+        name: updateFunkoDto.category,
+      })
+      if (!category || !category.active) {
+        throw new NotFoundException(
+          `La categoria ${updateFunkoDto.category} no existe o no esta activa`,
+        )
+      }
+      funko.category = category
     }
+
     this.logger.log(
       `Actualizando funko con id ${id} - ${JSON.stringify(updateFunkoDto)}`,
     )
 
-    funko.category = category
     funko.name = updateFunkoDto.name
     funko.image = updateFunkoDto.image
     funko.price = updateFunkoDto.price
