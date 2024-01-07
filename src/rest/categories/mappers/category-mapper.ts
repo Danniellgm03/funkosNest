@@ -9,6 +9,7 @@ export class CategoryMapper {
     const dto: CreateCategoryDto = new CreateCategoryDto()
     dto.name = entity.name
     dto.active = entity.active
+    return dto
   }
 
   toEntity(dto: CreateCategoryDto) {
