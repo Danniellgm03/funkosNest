@@ -79,10 +79,15 @@ export class CategoriesService {
       throw new BadRequestException('La categoria tiene funkos asociados')
     }
 
-    if (category) {
-      await this.categoryRepository.delete(category.id)
-    } else {
-      throw new NotFoundException(`La categoria con el id: ${id} no existe`)
-    }
+    await this.categoryRepository.delete(category.id)
+  }
+
+  async exists(name: string) {
+    return await this.categoryRepository
+      .createQueryBuilder()
+      .where('LOWER(name) = LOWER(:name)', {
+        name: name,
+      })
+      .getExists()
   }
 }
