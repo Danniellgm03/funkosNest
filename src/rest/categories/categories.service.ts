@@ -48,7 +48,7 @@ export class CategoriesService {
     category.id = uuidv4()
     await this.categoryRepository.save(category)
     this.logger.log(`La categoría ${category.name} ha sido creada`)
-    this.onChange('create-category', NotificationType.CREATE, category)
+    this.onChange(NotificationType.CREATE, category)
     return category
   }
 
@@ -96,7 +96,7 @@ export class CategoriesService {
       )
     }
 
-    this.onChange('update-category', NotificationType.UPDATE, category)
+    this.onChange(NotificationType.UPDATE, category)
     return category
   }
 
@@ -113,7 +113,7 @@ export class CategoriesService {
     }
 
     await this.categoryRepository.delete(category.id)
-    this.onChange('remove-category', NotificationType.DELETE, category)
+    this.onChange(NotificationType.DELETE, category)
   }
 
   async exists(name: string) {
@@ -125,13 +125,13 @@ export class CategoriesService {
       .getExists()
   }
 
-  private onChange(event: string, type: NotificationType, data: Category) {
+  private onChange(type: NotificationType, data: Category) {
     const notification = new Notification<Category>(
       'CATEGORIES',
       type,
       data,
       new Date(),
     )
-    this.notificationGateway.sendMessage(event, notification)
+    this.notificationGateway.sendMessage(notification)
   }
 }

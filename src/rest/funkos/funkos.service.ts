@@ -74,7 +74,7 @@ export class FunkosService {
       funko.category = cat
     }
     const dto = this.funkoMapper.toDto(await this.funkoRepository.save(funko))
-    this.onChange('create-funko', NotificationType.CREATE, dto)
+    this.onChange(NotificationType.CREATE, dto)
     return dto
   }
 
@@ -102,7 +102,7 @@ export class FunkosService {
     funko.quantity = updateFunkoDto.quantity
 
     const dto = this.funkoMapper.toDto(await this.funkoRepository.save(funko))
-    this.onChange('update-funko', NotificationType.UPDATE, dto)
+    this.onChange(NotificationType.UPDATE, dto)
 
     return dto
   }
@@ -112,7 +112,7 @@ export class FunkosService {
     const funko = this.funkoMapper.toEntity(dto)
     this.logger.log(`Eliminando funko con id ${id}`)
     await this.funkoRepository.remove(funko)
-    this.onChange('remove-funko', NotificationType.DELETE, dto)
+    this.onChange(NotificationType.DELETE, dto)
   }
 
   async updateImage(
@@ -158,22 +158,18 @@ export class FunkosService {
 
     funko.image = filePath
     const dto = this.funkoMapper.toDto(await this.funkoRepository.save(funko))
-    this.onChange('update-funko', NotificationType.UPDATE, dto)
+    this.onChange(NotificationType.UPDATE, dto)
 
     return dto
   }
 
-  private onChange(
-    event: string,
-    type: NotificationType,
-    data: ResponseFunkoDto,
-  ) {
+  private onChange(type: NotificationType, data: ResponseFunkoDto) {
     const notification = new Notification<ResponseFunkoDto>(
       'FUNKOS',
       type,
       data,
       new Date(),
     )
-    this.notificationGateway.sendMessage(event, notification)
+    this.notificationGateway.sendMessage(notification)
   }
 }
