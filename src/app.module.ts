@@ -5,6 +5,7 @@ import { CategoriesModule } from './rest/categories/categories.module'
 import { StorageModule } from './rest/storage/storage.module'
 import { ConfigModule } from '@nestjs/config'
 import { NotificationsModule } from './websockets/notifications/notifications.module'
+import { CacheModule } from '@nestjs/cache-manager'
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { NotificationsModule } from './websockets/notifications/notifications.mo
     }),
     StorageModule,
     NotificationsModule,
+    CacheModule.register(),
   ],
   controllers: [],
   providers: [],

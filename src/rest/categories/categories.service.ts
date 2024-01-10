@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -17,7 +18,8 @@ import {
   Notification,
   NotificationType,
 } from '../../websockets/notifications/models/notification.model'
-import { ResponseFunkoDto } from '../funkos/dto/response-funko.dto'
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
+import { Cache } from 'cache-manager'
 
 @Injectable()
 export class CategoriesService {
@@ -30,6 +32,7 @@ export class CategoriesService {
     @InjectRepository(Funko)
     private readonly funkoRepository: Repository<Funko>,
     private readonly notificationGateway: NotificationsGateway,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async create(createCategoryDto: CreateCategoryDto) {
@@ -49,20 +52,40 @@ export class CategoriesService {
     await this.categoryRepository.save(category)
     this.logger.log(`La categoría ${category.name} ha sido creada`)
     this.onChange(NotificationType.CREATE, category)
+    await this.invalidateCacheKey('all_categories')
     return category
   }
 
   async findAll() {
     this.logger.log(`Buscando todas las categorias`)
-    return await this.categoryRepository.find()
+
+    const cache = await this.cacheManager.get('all_categories')
+
+    if (cache) {
+      this.logger.log(`Obteniendo categorias desde cache`)
+      return cache
+    }
+
+    const categories = await this.categoryRepository.find()
+    await this.cacheManager.set('all_categories', categories, 30000)
+    return categories
   }
 
   async findById(id: string) {
+    const cache: Category = await this.cacheManager.get(`category_${id}`)
+
+    if (cache) {
+      this.logger.log(`Obteniendo categoria con id ${id} desde cache`)
+      return cache
+    }
+
     const category = await this.categoryRepository.findOneBy({ id })
     this.logger.log(`Buscando categoria con el id: ${id}`)
     if (!category) {
       throw new NotFoundException(`La categoria con el id: ${id} no existe`)
     }
+
+    await this.cacheManager.set(`category_${id}`, category, 30000)
     return category
   }
 
@@ -97,6 +120,8 @@ export class CategoriesService {
     }
 
     this.onChange(NotificationType.UPDATE, category)
+    await this.invalidateCacheKey('all_categories')
+    await this.invalidateCacheKey(`category_${id}`)
     return category
   }
 
@@ -114,6 +139,7 @@ export class CategoriesService {
 
     await this.categoryRepository.delete(category.id)
     this.onChange(NotificationType.DELETE, category)
+    await this.invalidateCacheKey('all_categories')
   }
 
   async exists(name: string) {
@@ -133,5 +159,12 @@ export class CategoriesService {
       new Date(),
     )
     this.notificationGateway.sendMessage(notification)
+  }
+
+  async invalidateCacheKey(keyPattern: string): Promise<void> {
+    const cacheKeys = await this.cacheManager.store.keys()
+    const keysToDelete = cacheKeys.filter((key) => key.startsWith(keyPattern))
+    const promises = keysToDelete.map((key) => this.cacheManager.del(key))
+    await Promise.all(promises)
   }
 }
