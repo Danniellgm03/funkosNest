@@ -19,11 +19,8 @@ export class NotificationsGateway {
     this.logger.log(`WebSocketGateway conectado en ${ENDPOINT}`)
   }
 
-  sendMessage(
-    event: string,
-    notification: Notification<ResponseFunkoDto | Category>,
-  ) {
-    this.server.emit(event, notification)
+  sendMessage(notification: Notification<ResponseFunkoDto | Category>) {
+    this.server.emit('updates', notification)
   }
 
   private handleConnection(client: Socket) {
