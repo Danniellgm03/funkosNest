@@ -2,9 +2,12 @@ import { Module } from '@nestjs/common'
 import { FunkosModule } from './rest/funkos/funkos.module'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { CategoriesModule } from './rest/categories/categories.module'
+import { StorageModule } from './rest/storage/storage.module'
+import { ConfigModule } from '@nestjs/config'
 
 @Module({
   imports: [
+    ConfigModule.forRoot(),
     FunkosModule,
     CategoriesModule,
     TypeOrmModule.forRoot({
@@ -17,6 +20,7 @@ import { CategoriesModule } from './rest/categories/categories.module'
       entities: [`${__dirname}/**/*.entity{.ts,.js}`],
       synchronize: true,
     }),
+    StorageModule,
   ],
   controllers: [],
   providers: [],
