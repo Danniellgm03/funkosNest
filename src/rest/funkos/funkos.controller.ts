@@ -25,12 +25,16 @@ import { FunkoExistsGuard } from './guard/funko-exists.guard'
 import { extname, parse } from 'path'
 import { diskStorage } from 'multer'
 import { FileInterceptor } from '@nestjs/platform-express'
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager'
 
 @Controller('funkos')
+//@UseInterceptors(CacheInterceptor)
 export class FunkosController {
   constructor(private readonly funkosService: FunkosService) {}
 
   @Get()
+  //@CacheKey('all_funkos')
+  //@CacheTTL(30)
   async findAll() {
     return await this.funkosService.findAll()
   }

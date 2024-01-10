@@ -9,17 +9,22 @@ import {
   Put,
   ParseUUIDPipe,
   UsePipes,
+  UseInterceptors,
 } from '@nestjs/common'
 import { CategoriesService } from './categories.service'
 import { CreateCategoryDto } from './dto/create-category.dto'
 import { UpdateCategoryDto } from './dto/update-category.dto'
 import { NoWithspacesPipe } from '../../pipes/no-withspaces.pipe'
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager'
 
 @Controller('categories')
+@UseInterceptors(CacheInterceptor)
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Get()
+  @CacheKey('all_categories')
+  @CacheTTL(30)
   async findAll() {
     return await this.categoriesService.findAll()
   }
