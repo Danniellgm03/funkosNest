@@ -9,6 +9,8 @@ import { Category } from '../../categories/entities/category.entity'
 
 @Entity('funkos')
 export class Funko {
+  public static IMAGE_DEFAULT = 'https://via.placeholder.com/150'
+
   @PrimaryGeneratedColumn()
   id: number
 
@@ -21,7 +23,11 @@ export class Funko {
   @Column('int', { nullable: false })
   quantity: number
 
-  @Column('varchar', { length: 255, nullable: false })
+  @Column('varchar', {
+    length: 255,
+    nullable: false,
+    default: Funko.IMAGE_DEFAULT,
+  })
   image: string
 
   @ManyToOne(() => Category, (category) => category.funkos)
