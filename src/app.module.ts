@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 import { CategoriesModule } from './rest/categories/categories.module'
 import { StorageModule } from './rest/storage/storage.module'
 import { ConfigModule } from '@nestjs/config'
+import { NotificationsModule } from './websockets/notifications/notifications.module'
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ConfigModule } from '@nestjs/config'
       synchronize: true,
     }),
     StorageModule,
+    NotificationsModule,
   ],
   controllers: [],
   providers: [],
