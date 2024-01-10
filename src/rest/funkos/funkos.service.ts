@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common'
 import { CreateFunkoDto } from './dto/create-funko.dto'
 import { UpdateFunkoDto } from './dto/update-funko.dto'
 import { Funko } from './entities/funko.entity'
@@ -6,6 +11,8 @@ import { FunkoMapper } from './mappers/funko-mapper'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { Category } from '../categories/entities/category.entity'
+import { Request } from 'express'
+import { StorageService } from '../storage/storage.service'
 
 @Injectable()
 export class FunkosService {
@@ -16,6 +23,7 @@ export class FunkosService {
     private readonly funkoRepository: Repository<Funko>,
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
+    private readonly storageService: StorageService,
     private readonly funkoMapper: FunkoMapper,
   ) {}
 
@@ -91,5 +99,50 @@ export class FunkosService {
     const funko = this.funkoMapper.toEntity(await this.findById(id))
     this.logger.log(`Eliminando funko con id ${id}`)
     await this.funkoRepository.remove(funko)
+  }
+
+  async updateImage(
+    id: number,
+    file: Express.Multer.File,
+    req: Request,
+    withUrl: boolean = true,
+  ) {
+    this.logger.log(`Actualizando imagen de funko con id: ${id}`)
+    const funko = this.funkoMapper.toEntity(await this.findById(id))
+
+    if (funko.image !== Funko.IMAGE_DEFAULT) {
+      this.logger.log(`Borrando imagen ${funko.image}`)
+      let imagePath = funko.image
+      if (withUrl) {
+        imagePath = this.storageService.getFileNameWithouUrl(funko.image)
+      }
+
+      try {
+        this.storageService.removeFile(imagePath)
+      } catch (e) {
+        this.logger.error(e)
+      }
+    }
+
+    if (!file) {
+      throw new BadRequestException('Fichero no encontrado')
+    }
+
+    let filePath: string
+
+    if (withUrl) {
+      this.logger.log(`Generando url para ${file.filename}`)
+      const apiVersion = process.env.API_VERSION
+        ? `/${process.env.API_VERSION}`
+        : ''
+      filePath = `${req.protocol}://${req.get(
+        'host',
+      )}/api${apiVersion}/storage/${file.filename}`
+    } else {
+      filePath = file.filename
+    }
+
+    funko.image = filePath
+    return this.funkoMapper.toDto(await this.funkoRepository.save(funko))
   }
 }
