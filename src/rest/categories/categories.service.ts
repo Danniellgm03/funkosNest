@@ -12,6 +12,12 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { v4 as uuidv4 } from 'uuid'
 import { Funko } from '../funkos/entities/funko.entity'
+import { NotificationsGateway } from '../../websockets/notifications/notifications.gateway'
+import {
+  Notification,
+  NotificationType,
+} from '../../websockets/notifications/models/notification.model'
+import { ResponseFunkoDto } from '../funkos/dto/response-funko.dto'
 
 @Injectable()
 export class CategoriesService {
@@ -23,6 +29,7 @@ export class CategoriesService {
     private readonly categoryRepository: Repository<Category>,
     @InjectRepository(Funko)
     private readonly funkoRepository: Repository<Funko>,
+    private readonly notificationGateway: NotificationsGateway,
   ) {}
 
   async create(createCategoryDto: CreateCategoryDto) {
@@ -41,6 +48,7 @@ export class CategoriesService {
     category.id = uuidv4()
     await this.categoryRepository.save(category)
     this.logger.log(`La categoría ${category.name} ha sido creada`)
+    this.onChange('create-category', NotificationType.CREATE, category)
     return category
   }
 
@@ -88,6 +96,7 @@ export class CategoriesService {
       )
     }
 
+    this.onChange('update-category', NotificationType.UPDATE, category)
     return category
   }
 
@@ -104,6 +113,7 @@ export class CategoriesService {
     }
 
     await this.categoryRepository.delete(category.id)
+    this.onChange('remove-category', NotificationType.DELETE, category)
   }
 
   async exists(name: string) {
@@ -113,5 +123,15 @@ export class CategoriesService {
         name: name,
       })
       .getExists()
+  }
+
+  private onChange(event: string, type: NotificationType, data: Category) {
+    const notification = new Notification<Category>(
+      'CATEGORIES',
+      type,
+      data,
+      new Date(),
+    )
+    this.notificationGateway.sendMessage(event, notification)
   }
 }

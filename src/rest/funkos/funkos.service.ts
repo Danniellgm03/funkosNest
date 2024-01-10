@@ -13,6 +13,12 @@ import { Repository } from 'typeorm'
 import { Category } from '../categories/entities/category.entity'
 import { Request } from 'express'
 import { StorageService } from '../storage/storage.service'
+import { NotificationsGateway } from '../../websockets/notifications/notifications.gateway'
+import { ResponseFunkoDto } from './dto/response-funko.dto'
+import {
+  Notification,
+  NotificationType,
+} from '../../websockets/notifications/models/notification.model'
 
 @Injectable()
 export class FunkosService {
@@ -25,6 +31,7 @@ export class FunkosService {
     private readonly categoryRepository: Repository<Category>,
     private readonly storageService: StorageService,
     private readonly funkoMapper: FunkoMapper,
+    private readonly notificationGateway: NotificationsGateway,
   ) {}
 
   async findAll() {
@@ -66,7 +73,9 @@ export class FunkosService {
       }
       funko.category = cat
     }
-    return this.funkoMapper.toDto(await this.funkoRepository.save(funko))
+    const dto = this.funkoMapper.toDto(await this.funkoRepository.save(funko))
+    this.onChange('create-funko', NotificationType.CREATE, dto)
+    return dto
   }
 
   async update(id: number, updateFunkoDto: UpdateFunkoDto) {
@@ -92,13 +101,18 @@ export class FunkosService {
     funko.price = updateFunkoDto.price
     funko.quantity = updateFunkoDto.quantity
 
-    return this.funkoMapper.toDto(await this.funkoRepository.save(funko))
+    const dto = this.funkoMapper.toDto(await this.funkoRepository.save(funko))
+    this.onChange('update-funko', NotificationType.UPDATE, dto)
+
+    return dto
   }
 
   async remove(id: number) {
-    const funko = this.funkoMapper.toEntity(await this.findById(id))
+    const dto = await this.findById(id)
+    const funko = this.funkoMapper.toEntity(dto)
     this.logger.log(`Eliminando funko con id ${id}`)
     await this.funkoRepository.remove(funko)
+    this.onChange('remove-funko', NotificationType.DELETE, dto)
   }
 
   async updateImage(
@@ -143,6 +157,23 @@ export class FunkosService {
     }
 
     funko.image = filePath
-    return this.funkoMapper.toDto(await this.funkoRepository.save(funko))
+    const dto = this.funkoMapper.toDto(await this.funkoRepository.save(funko))
+    this.onChange('update-funko', NotificationType.UPDATE, dto)
+
+    return dto
+  }
+
+  private onChange(
+    event: string,
+    type: NotificationType,
+    data: ResponseFunkoDto,
+  ) {
+    const notification = new Notification<ResponseFunkoDto>(
+      'FUNKOS',
+      type,
+      data,
+      new Date(),
+    )
+    this.notificationGateway.sendMessage(event, notification)
   }
 }
