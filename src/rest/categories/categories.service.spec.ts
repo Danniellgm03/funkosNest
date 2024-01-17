@@ -8,17 +8,34 @@ import { Category } from './entities/category.entity'
 import { BadRequestException, NotFoundException } from '@nestjs/common'
 import { CreateCategoryDto } from './dto/create-category.dto'
 import { UpdateCategoryDto } from './dto/update-category.dto'
+import { NotificationsGateway } from '../../websockets/notifications/notifications.gateway'
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
+import { Cache } from 'cache-manager'
 
 describe('CategoriesService', () => {
   let service: CategoriesService
   let funkoRepository: Repository<Funko>
   let categoryRepository: Repository<Category>
   let mapper: CategoryMapper
+  let notificationGateway: NotificationsGateway
+  let cacheManager: Cache
 
   const mapperMock = {
     toDto: jest.fn(),
     toEntity: jest.fn(),
     updateToEntity: jest.fn(),
+  }
+
+  const productsNotificationsGatewayMock = {
+    sendMessage: jest.fn(),
+  }
+
+  const cacheManagerMock = {
+    get: jest.fn(() => Promise.resolve()),
+    set: jest.fn(() => Promise.resolve()),
+    store: {
+      keys: jest.fn(),
+    },
   }
 
   beforeEach(async () => {
@@ -28,12 +45,19 @@ describe('CategoriesService', () => {
         { provide: getRepositoryToken(Funko), useClass: Repository },
         { provide: getRepositoryToken(Category), useClass: Repository },
         { provide: CategoryMapper, useValue: mapperMock },
+        {
+          provide: NotificationsGateway,
+          useValue: productsNotificationsGatewayMock,
+        },
+        { provide: CACHE_MANAGER, useValue: cacheManagerMock },
       ],
     }).compile()
     service = module.get<CategoriesService>(CategoriesService)
     funkoRepository = module.get(getRepositoryToken(Funko))
     categoryRepository = module.get(getRepositoryToken(Category))
     mapper = module.get<CategoryMapper>(CategoryMapper)
+    notificationGateway = module.get<NotificationsGateway>(NotificationsGateway)
+    cacheManager = module.get<Cache>(CACHE_MANAGER)
   })
 
   it('should be defined', () => {
@@ -52,18 +76,38 @@ describe('CategoriesService', () => {
       categories.push(category)
     })
 
-    it('should return all categories', async () => {
+    it('should return all categories without cache', async () => {
       jest.spyOn(categoryRepository, 'find').mockResolvedValue(categories)
+
+      jest.spyOn(cacheManager, 'get').mockResolvedValue(Promise.resolve(null))
+
+      jest.spyOn(cacheManager, 'set').mockResolvedValue()
 
       const result = await service.findAll()
       expect(result[0]).toEqual(category)
       expect(result[0].name).toBe(result[0].name)
       expect(result[0].id).toBe(result[0].id)
       expect(result[0].active).toBe(result[0].active)
+      cacheManagerMock.get.mockClear()
+    })
+
+    it('should return all categories with cache', async () => {
+      jest
+        .spyOn(cacheManager, 'get')
+        .mockResolvedValue(Promise.resolve(categories))
+
+      const result = await service.findAll()
+      expect(result[0]).toEqual(category)
+      expect(result[0].name).toBe(result[0].name)
+      expect(result[0].id).toBe(result[0].id)
+      expect(result[0].active).toBe(result[0].active)
+      expect(cacheManager.get).toHaveBeenCalledTimes(1)
+      cacheManagerMock.get.mockClear()
     })
 
     it('should return empty list categories', async () => {
       jest.spyOn(categoryRepository, 'find').mockResolvedValue([])
+      jest.spyOn(cacheManager, 'get').mockResolvedValue(Promise.resolve([]))
 
       const result = await service.findAll()
       expect(result).toEqual([])
@@ -81,8 +125,19 @@ describe('CategoriesService', () => {
       category.updatedAt = new Date()
     })
 
-    it('should return category valid', async () => {
+    it('should return category valid without cache', async () => {
       jest.spyOn(categoryRepository, 'findOneBy').mockResolvedValue(category)
+      jest.spyOn(cacheManager, 'get').mockResolvedValue(Promise.resolve(null))
+      jest.spyOn(cacheManager, 'set').mockResolvedValue()
+
+      const result = await service.findById(category.id)
+      expect(result).toEqual(category)
+    })
+
+    it('should return category valid with cache', async () => {
+      jest
+        .spyOn(cacheManager, 'get')
+        .mockResolvedValue(Promise.resolve(category))
 
       const result = await service.findById(category.id)
       expect(result).toEqual(category)
@@ -90,6 +145,7 @@ describe('CategoriesService', () => {
 
     it('should return category not found exception', async () => {
       jest.spyOn(categoryRepository, 'findOneBy').mockResolvedValue(null)
+      jest.spyOn(cacheManager, 'get').mockResolvedValue(Promise.resolve(null))
 
       await expect(service.findById(category.id)).rejects.toThrow(
         NotFoundException,
@@ -119,6 +175,7 @@ describe('CategoriesService', () => {
       jest.spyOn(mapper, 'toEntity').mockReturnValue(category)
       jest.spyOn(categoryRepository, 'save').mockResolvedValue(category)
       jest.spyOn(service, 'exists').mockResolvedValue(false)
+      jest.spyOn(cacheManager.store, 'keys').mockResolvedValue([])
 
       const result = await service.create(categoryCreateDto)
       expect(result.name).toBe(category.name)
@@ -165,6 +222,7 @@ describe('CategoriesService', () => {
     it('should update category', async () => {
       jest.spyOn(service, 'findById').mockResolvedValue(category)
       jest.spyOn(categoryRepository, 'save').mockResolvedValue(responseCategory)
+      jest.spyOn(cacheManager.store, 'keys').mockResolvedValue([])
 
       const result = await service.update(category.id, updateCategoryDto)
 
@@ -287,6 +345,8 @@ describe('CategoriesService', () => {
     it('should remove category', async () => {
       jest.spyOn(service, 'findById').mockResolvedValue(category)
       jest.spyOn(funkoRepository, 'count').mockResolvedValue(0)
+      jest.spyOn(cacheManager.store, 'keys').mockResolvedValue([])
+
       jest
         .spyOn(categoryRepository, 'delete')
         .mockResolvedValue(new DeleteResult())
@@ -351,6 +411,18 @@ describe('CategoriesService', () => {
       const result = await service.exists('DISNEY')
 
       expect(result).toBeFalsy()
+    })
+  })
+
+  describe('invalidateCacheKey', () => {
+    it('should delete keys matching the key pattern', async () => {
+      const fakeCacheKeys = ['key1', 'key2', 'key3', 'otherKey']
+      jest.spyOn(cacheManager.store, 'keys').mockResolvedValue(fakeCacheKeys)
+
+      // Llama al método a probar
+      await service.invalidateCacheKey('prefix_')
+
+      expect(cacheManager.store.keys).toHaveBeenCalled()
     })
   })
 })

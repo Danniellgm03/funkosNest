@@ -10,6 +10,7 @@ import { Test, TestingModule } from '@nestjs/testing'
 import { CategoriesController } from '../../../src/rest/categories/categories.controller'
 import { CategoriesService } from '../../../src/rest/categories/categories.service'
 import * as request from 'supertest'
+import { CacheInterceptor } from '@nestjs/cache-manager'
 
 describe('CategoriesController (e2e)', () => {
   let app: INestApplication
@@ -51,7 +52,10 @@ describe('CategoriesController (e2e)', () => {
         CategoriesService,
         { provide: CategoriesService, useValue: mockCategoryService },
       ],
-    }).compile()
+    })
+      .overrideInterceptor(CacheInterceptor)
+      .useValue({})
+      .compile()
 
     app = moduleFixture.createNestApplication()
     await app.init()

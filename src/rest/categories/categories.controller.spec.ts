@@ -7,6 +7,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common'
 import { CreateCategoryDto } from './dto/create-category.dto'
 import { UpdateCategoryDto } from './dto/update-category.dto'
 import { DeleteResult } from 'typeorm'
+import { CacheInterceptor } from '@nestjs/cache-manager'
 
 describe('CategoriesController', () => {
   let controller: CategoriesController
@@ -27,7 +28,10 @@ describe('CategoriesController', () => {
       providers: [
         { provide: CategoriesService, useValue: mockCategoryService },
       ],
-    }).compile()
+    })
+      .overrideInterceptor(CacheInterceptor)
+      .useValue({})
+      .compile()
 
     controller = module.get<CategoriesController>(CategoriesController)
     service = module.get<CategoriesService>(CategoriesService)

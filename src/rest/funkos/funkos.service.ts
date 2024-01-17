@@ -22,6 +22,13 @@ import {
 } from '../../websockets/notifications/models/notification.model'
 import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Cache } from 'cache-manager'
+import {
+  FilterOperator,
+  FilterSuffix,
+  paginate,
+  Paginated,
+  PaginateQuery,
+} from 'nestjs-paginate'
 
 @Injectable()
 export class FunkosService {
@@ -41,7 +48,7 @@ export class FunkosService {
   async findAll() {
     this.logger.log(`Listando todos los funkos`)
 
-    const cache = await this.cacheManager.get('all_funkos')
+    const cache: ResponseFunkoDto[] = await this.cacheManager.get('all_funkos')
     if (cache) {
       this.logger.log(`Obteniendo funkos desde cache`)
       return cache
@@ -55,6 +62,29 @@ export class FunkosService {
     const res = funkos.map((f) => this.funkoMapper.toDto(f))
     await this.cacheManager.set('all_funkos', res, 30000)
     return res
+  }
+
+  async findAllQuery(query: PaginateQuery) {
+    this.logger.log(`Listando todos los funkos`)
+
+    const queryBuilder = this.funkoRepository
+      .createQueryBuilder('funko')
+      .leftJoinAndSelect('funko.category', 'category')
+
+    const pagination = await paginate(query, queryBuilder, {
+      sortableColumns: ['id', 'name', 'price', 'quantity'],
+      defaultSortBy: [['id', 'DESC']],
+      searchableColumns: ['name'],
+      filterableColumns: {
+        name: [FilterOperator.EQ, FilterSuffix.NOT],
+        price: [FilterOperator.EQ, FilterOperator.GT, FilterOperator.LT],
+      },
+    })
+
+    return {
+      ...pagination,
+      data: (pagination.data ?? []).map((f) => this.funkoMapper.toDto(f)),
+    } as Paginated<ResponseFunkoDto>
   }
 
   async findById(id: number) {
@@ -77,8 +107,9 @@ export class FunkosService {
       throw new NotFoundException(`El funko con id ${id} no existe`)
     }
 
-    await this.cacheManager.set(`funko_${id}`, funko, 30000)
-    return this.funkoMapper.toDto(funko)
+    const dto = this.funkoMapper.toDto(funko)
+    await this.cacheManager.set(`funko_${id}`, dto, 30000)
+    return dto
   }
 
   async create(createFunkoDto: CreateFunkoDto) {

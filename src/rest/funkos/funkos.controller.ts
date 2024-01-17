@@ -26,6 +26,8 @@ import { extname, parse } from 'path'
 import { diskStorage } from 'multer'
 import { FileInterceptor } from '@nestjs/platform-express'
 import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager'
+import { Paginate, Paginated, PaginateQuery } from 'nestjs-paginate'
+import { ResponseFunkoDto } from './dto/response-funko.dto'
 
 @Controller('funkos')
 //@UseInterceptors(CacheInterceptor)
@@ -35,8 +37,8 @@ export class FunkosController {
   @Get()
   //@CacheKey('all_funkos')
   //@CacheTTL(30)
-  async findAll() {
-    return await this.funkosService.findAll()
+  async findAll(@Paginate() query: PaginateQuery) {
+    return await this.funkosService.findAllQuery(query)
   }
 
   @Get(':id')

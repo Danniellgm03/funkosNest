@@ -8,6 +8,7 @@ import { NotFoundException } from '@nestjs/common'
 import { CreateFunkoDto } from './dto/create-funko.dto'
 import { UpdateFunkoDto } from './dto/update-funko.dto'
 import { Not } from 'typeorm'
+import { Paginated, SortBy } from 'nestjs-paginate'
 
 describe('FunkosController', () => {
   let controller: FunkosController
@@ -19,6 +20,8 @@ describe('FunkosController', () => {
     create: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
+    updateImage: jest.fn(),
+    findAllQuery: jest.fn(),
   }
 
   beforeEach(async () => {
@@ -57,25 +60,43 @@ describe('FunkosController', () => {
     })
 
     it('should return all funkos', async () => {
-      jest.spyOn(service, 'findAll').mockResolvedValue(funkos)
+      const resTest = new Paginated<ResponseFunkoDto>()
+      resTest.data = funkos
 
-      const result = await controller.findAll()
+      jest.spyOn(service, 'findAllQuery').mockResolvedValue(resTest)
 
-      expect(result[0]).toEqual(funkoDto)
-      expect(result[0].id).toBe(funkoDto.id)
-      expect(result[0].name).toBe(funkoDto.name)
-      expect(result[0].category).toBe(funkoDto.category)
-      expect(result[0].image).toBe(funkoDto.image)
-      expect(result[0].price).toBe(funkoDto.price)
-      expect(result[0].quantity).toBe(funkoDto.quantity)
+      const paginateOptions = {
+        page: 1,
+        limit: 10,
+        path: 'funkos',
+      }
+
+      const result = await controller.findAll(paginateOptions)
+
+      expect(result.data[0]).toEqual(funkoDto)
+      expect(result.data[0].id).toBe(funkoDto.id)
+      expect(result.data[0].name).toBe(funkoDto.name)
+      expect(result.data[0].category).toBe(funkoDto.category)
+      expect(result.data[0].image).toBe(funkoDto.image)
+      expect(result.data[0].price).toBe(funkoDto.price)
+      expect(result.data[0].quantity).toBe(funkoDto.quantity)
     })
 
     it('should return empty array', async () => {
-      jest.spyOn(service, 'findAll').mockResolvedValue([])
+      const resTest = new Paginated<ResponseFunkoDto>()
+      resTest.data = []
 
-      const result = await controller.findAll()
+      jest.spyOn(service, 'findAllQuery').mockResolvedValue(resTest)
 
-      expect(result).toEqual([])
+      const paginateOptions = {
+        page: 1,
+        limit: 10,
+        path: 'funkos',
+      }
+
+      const result = await controller.findAll(paginateOptions)
+
+      expect(result.data).toEqual([])
     })
   })
 
@@ -281,6 +302,52 @@ describe('FunkosController', () => {
       const result = controller.remove(1)
 
       await expect(result).rejects.toThrow(NotFoundException)
+    })
+  })
+
+  describe('updateImage', () => {
+    const funkoDto = new ResponseFunkoDto()
+    const updateFunkoDto = new UpdateFunkoDto()
+    const category = new Category()
+
+    beforeEach(() => {
+      category.id = '7f1e1546-79e5-49d5-9b58-dc353ae82f97'
+      category.name = 'DISNEY'
+      category.active = true
+
+      funkoDto.id = 1
+      funkoDto.name = 'Pepe'
+      funkoDto.image = 'http://localhost/pepe.jpg'
+      funkoDto.quantity = 19
+      funkoDto.price = 20
+      funkoDto.createdAt = new Date()
+      funkoDto.updatedAt = new Date()
+      funkoDto.category = category.name
+
+      updateFunkoDto.name = funkoDto.name
+      updateFunkoDto.price = funkoDto.price
+      updateFunkoDto.image = funkoDto.image
+      updateFunkoDto.quantity = funkoDto.quantity
+      updateFunkoDto.category = funkoDto.category
+    })
+
+    it('should update image', async () => {
+      jest.spyOn(service, 'updateImage').mockResolvedValue(funkoDto)
+      const mockFile = {} as Express.Multer.File
+      const mockReq = {} as any
+
+      const result = await controller.updateImage(
+        funkoDto.id,
+        mockFile,
+        mockReq,
+      )
+
+      expect(result.name).toBe(funkoDto.name)
+      expect(result.id).toBe(funkoDto.id)
+      expect(result.image).toBe(funkoDto.image)
+      expect(result.quantity).toBe(funkoDto.quantity)
+      expect(result.price).toBe(funkoDto.price)
+      expect(result.category).toBe(funkoDto.category)
     })
   })
 })
