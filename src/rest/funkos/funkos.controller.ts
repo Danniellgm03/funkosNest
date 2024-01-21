@@ -25,16 +25,18 @@ import { FunkoExistsGuard } from './guard/funko-exists.guard'
 import { extname, parse } from 'path'
 import { diskStorage } from 'multer'
 import { FileInterceptor } from '@nestjs/platform-express'
-import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager'
-import { Paginate, Paginated, PaginateQuery } from 'nestjs-paginate'
-import { ResponseFunkoDto } from './dto/response-funko.dto'
+import { Paginate, PaginateQuery } from 'nestjs-paginate'
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { Roles, RolesAuthGuard } from '../auth/guards/roles-auth.guard'
 
 @Controller('funkos')
+@UseGuards(JwtAuthGuard, RolesAuthGuard)
 //@UseInterceptors(CacheInterceptor)
 export class FunkosController {
   constructor(private readonly funkosService: FunkosService) {}
 
   @Get()
+  @Roles('USER')
   //@CacheKey('all_funkos')
   //@CacheTTL(30)
   async findAll(@Paginate() query: PaginateQuery) {
@@ -42,6 +44,7 @@ export class FunkosController {
   }
 
   @Get(':id')
+  @Roles('USER')
   async findById(@Param('id', ParseIntPipe) id: number) {
     return await this.funkosService.findById(id)
   }
@@ -49,12 +52,14 @@ export class FunkosController {
   @Post()
   @HttpCode(201)
   @UsePipes(new NoWithspacesPipe({ fields: ['name', 'image', 'category'] }))
+  @Roles('ADMIN')
   async create(@Body() createFunkoDto: CreateFunkoDto) {
     return await this.funkosService.create(createFunkoDto)
   }
 
   @Put(':id')
   @UsePipes(new NoWithspacesPipe({ fields: ['name', 'image', 'category'] }))
+  @Roles('ADMIN')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateFunkoDto: UpdateFunkoDto,
@@ -64,6 +69,7 @@ export class FunkosController {
 
   @Delete(':id')
   @HttpCode(204)
+  @Roles('ADMIN')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.funkosService.remove(id)
   }
@@ -104,6 +110,7 @@ export class FunkosController {
       },
     }),
   )
+  @Roles('ADMIN')
   async updateImage(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File,
