@@ -14,22 +14,30 @@ import { CorsConfigModule } from './config/cors/cors.module'
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot(
+      process.env.NODE_ENV == 'dev'
+        ? { envFilePath: '.env' }
+        : { envFilePath: '.env.prod' },
+    ),
     CorsConfigModule,
     FunkosModule,
     CategoriesModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'admin',
-      password: 'adminPassword123',
-      database: 'FUNKOSHOP',
+      host: process.env.POSTGRES_HOST || 'localhost',
+      port: parseInt(process.env.POSTGRES_PORT) || 5432,
+      username: process.env.DATABASE_USER || 'admin',
+      password: process.env.DATABASE_PASSWORD || 'adminPassword123',
+      database: process.env.POSTGRES_DATABASE || 'FUNKOSHOP',
       entities: [`${__dirname}/**/*.entity{.ts,.js}`],
       synchronize: true,
     }),
     MongooseModule.forRoot(
-      'mongodb://admin:adminPassword123@localhost:27017/funkos',
+      `mongodb://${process.env.DATABASE_USER}:${
+        process.env.DATABASE_PASSWORD
+      }@${process.env.MONGO_HOST}:${process.env.MONGO_PORT || 27017}/${
+        process.env.MONGO_DATABASE
+      }`,
     ),
     StorageModule,
     NotificationsModule,
