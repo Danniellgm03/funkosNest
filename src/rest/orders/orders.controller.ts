@@ -27,7 +27,7 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Get()
-  @Roles('USER')
+  @Roles('ADMIN')
   async findAll(
     @Query('page', new DefaultValuePipe(1)) page: number = 1,
     @Query('limit', new DefaultValuePipe(20)) limit: number = 20,
@@ -40,13 +40,13 @@ export class OrdersController {
   }
 
   @Get(':id')
-  @Roles('USER')
+  @Roles('ADMIN')
   async findOne(@Param('id', IdValidatePipe) id: string) {
     return await this.ordersService.findOne(id)
   }
 
   @Get('user/:id')
-  @Roles('USER')
+  @Roles('ADMIN')
   async findByUser(@Param('id', ParseIntPipe) id: number) {
     return await this.ordersService.findByIdUser(id)
   }
