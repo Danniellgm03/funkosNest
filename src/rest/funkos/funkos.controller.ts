@@ -25,18 +25,50 @@ import { FunkoExistsGuard } from './guard/funko-exists.guard'
 import { extname, parse } from 'path'
 import { diskStorage } from 'multer'
 import { FileInterceptor } from '@nestjs/platform-express'
-import { Paginate, PaginateQuery } from 'nestjs-paginate'
+import { Paginate, Paginated, PaginateQuery } from 'nestjs-paginate'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { Roles, RolesAuthGuard } from '../auth/guards/roles-auth.guard'
+import {
+  ApiBadRequestResponse,
+  ApiBody,
+  ApiNotFoundResponse,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger'
+import { ResponseFunkoDto } from './dto/response-funko.dto'
 
 @Controller('funkos')
 @UseGuards(JwtAuthGuard, RolesAuthGuard)
 //@UseInterceptors(CacheInterceptor)
+@ApiTags('Funkos')
 export class FunkosController {
   constructor(private readonly funkosService: FunkosService) {}
 
   @Get()
   @Roles('USER')
+  @ApiResponse({
+    status: 200,
+    description: 'Listado de Funkos',
+    type: Paginated<ResponseFunkoDto>,
+  })
+  @ApiQuery({
+    name: 'page',
+    description: 'Número de página',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'limit',
+    description: 'Número de elementos por página',
+    required: false,
+  })
+  @ApiQuery({
+    description: 'Filtro de busqueda: filter.campo = $eq:valor',
+    name: 'filter',
+    required: false,
+    type: String,
+  })
   //@CacheKey('all_funkos')
   //@CacheTTL(30)
   async findAll(@Paginate() query: PaginateQuery) {
@@ -45,6 +77,17 @@ export class FunkosController {
 
   @Get(':id')
   @Roles('USER')
+  @ApiResponse({
+    status: 200,
+    description: 'Funko',
+    type: ResponseFunkoDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'Funko no encontrado',
+  })
+  @ApiBadRequestResponse({
+    description: 'Error en la petición',
+  })
   async findById(@Param('id', ParseIntPipe) id: number) {
     return await this.funkosService.findById(id)
   }
@@ -53,6 +96,21 @@ export class FunkosController {
   @HttpCode(201)
   @UsePipes(new NoWithspacesPipe({ fields: ['name', 'image', 'category'] }))
   @Roles('ADMIN')
+  @ApiResponse({
+    status: 201,
+    description: 'Funko creado',
+    type: ResponseFunkoDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Error en la petición',
+  })
+  @ApiNotFoundResponse({
+    description: 'Categoria no encontrada',
+  })
+  @ApiBody({
+    description: 'Datos del funko',
+    type: CreateFunkoDto,
+  })
   async create(@Body() createFunkoDto: CreateFunkoDto) {
     return await this.funkosService.create(createFunkoDto)
   }
@@ -60,6 +118,29 @@ export class FunkosController {
   @Put(':id')
   @UsePipes(new NoWithspacesPipe({ fields: ['name', 'image', 'category'] }))
   @Roles('ADMIN')
+  @ApiResponse({
+    status: 200,
+    description: 'Funko actualizado',
+    type: ResponseFunkoDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Error en la petición',
+  })
+  @ApiNotFoundResponse({
+    description: 'Funko no encontrado',
+  })
+  @ApiNotFoundResponse({
+    description: 'Categoria no encontrada',
+  })
+  @ApiBody({
+    description: 'Datos del funko',
+    type: UpdateFunkoDto,
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Identificador del funko',
+    type: Number,
+  })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateFunkoDto: UpdateFunkoDto,
@@ -70,6 +151,21 @@ export class FunkosController {
   @Delete(':id')
   @HttpCode(204)
   @Roles('ADMIN')
+  @ApiResponse({
+    status: 204,
+    description: 'Funko eliminado',
+  })
+  @ApiBadRequestResponse({
+    description: 'Error en la petición',
+  })
+  @ApiNotFoundResponse({
+    description: 'Funko no encontrado',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Identificador del funko',
+    type: Number,
+  })
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.funkosService.remove(id)
   }
@@ -111,6 +207,25 @@ export class FunkosController {
     }),
   )
   @Roles('ADMIN')
+  @ApiResponse({
+    status: 200,
+    description: 'Imagen actualizada',
+    type: ResponseFunkoDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Error en la petición',
+  })
+  @ApiNotFoundResponse({
+    description: 'Funko no encontrado',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Identificador del funko',
+    type: Number,
+  })
+  @ApiBody({
+    description: 'Imagen del funko',
+  })
   async updateImage(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File,

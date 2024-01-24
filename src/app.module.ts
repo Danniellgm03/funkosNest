@@ -7,13 +7,15 @@ import { ConfigModule } from '@nestjs/config'
 import { NotificationsModule } from './websockets/notifications/notifications.module'
 import { CacheModule } from '@nestjs/cache-manager'
 import { MongooseModule } from '@nestjs/mongoose'
-import { OrdersModule } from './rest/orders/orders.module';
-import { AuthModule } from './rest/auth/auth.module';
-import { UsersModule } from './rest/users/users.module';
+import { OrdersModule } from './rest/orders/orders.module'
+import { AuthModule } from './rest/auth/auth.module'
+import { UsersModule } from './rest/users/users.module'
+import { CorsConfigModule } from './config/cors/cors.module'
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
+    CorsConfigModule,
     FunkosModule,
     CategoriesModule,
     TypeOrmModule.forRoot({
